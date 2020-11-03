@@ -1,5 +1,4 @@
-import queue
-import DataTools
+from . import DataTools
 
 from multiprocessing import cpu_count, Process, Manager, Queue
 from datetime import datetime, timedelta
