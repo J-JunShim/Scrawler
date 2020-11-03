@@ -1,4 +1,5 @@
-from . import DataTools
+import queue
+import DataTools
 
 from multiprocessing import cpu_count, Process, Manager, Queue
 from datetime import datetime, timedelta
@@ -25,8 +26,8 @@ def make_url_naver(query, sort, start):
     return url
 
 
-def creator(queue, url, select):
-    urls = DataTools.get_href(url, select)
+def creator(queue, urls, select):
+    urls = [DataTools.get_href(url, select) for url in urls]
     for url in urls:
         queue.put(url)
         print()
@@ -47,19 +48,16 @@ def main():
 
     results = manager.list()
     select = 'div.news_area > a'
+    urls = [make_url_naver('코로나', 2, page * 10) for page in range(10)]
 
-    for page in range(10):
-        url = make_url_naver('코로나', 2, page * 10)
+    proc1 = Process(target=creator, args=(que, urls, select))
+    proc2 = Process(target=worker, args=(que, results))
 
-        proc1 = Process(target=creator, args=(que, url, select))
-        proc2 = Process(target=worker, args=(que, results))
+    proc1.start()
+    proc1.join()
 
-        proc1.start()
-        proc1.join()
-        proc2.start()
-        proc2.join()
-
-        print('page: ', page)
+    proc2.start()
+    proc2.join()
 
     print(len(results))
 
