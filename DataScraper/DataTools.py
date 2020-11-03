@@ -17,7 +17,26 @@ def get_href(url, select):
 
 def get_article(url):
     article = _Article(url, language='ko')
-    article.download()
-    article.parse()
+
+    if article.is_valid_url:
+        article.download()
+        article.parse()
+
+    if not article.is_parsed:
+        article = None
 
     return article
+
+
+def article_to_dict(url):
+    article = get_article(url)
+
+    if not article.is_valid_url():
+        return None
+
+    url = article.url
+    title = article.title
+    text = article.text
+    publish_date = article.publish_date
+
+    return {'url': url, 'date': publish_date, 'body': [title, text]}
