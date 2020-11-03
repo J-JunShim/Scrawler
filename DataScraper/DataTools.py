@@ -4,13 +4,13 @@ from bs4 import BeautifulSoup as _BeautifulSoup
 from newspaper import Article as _Article
 
 
-def get_href(url, select):
+def get_href(url, selector):
     urls = []
     request = _requests.get(url)
 
     if request.ok:
         document = _BeautifulSoup(request.text, 'html.parser')
-        urls = [a.get('href') for a in document.select(select)]
+        urls = [a.get('href') for a in document.select(selector)]
 
     return urls
 
@@ -32,7 +32,7 @@ def article_to_dict(url):
     article = get_article(url)
 
     if not article.is_valid_url():
-        return None
+        return {}
 
     url = article.url
     title = article.title
