@@ -1,5 +1,7 @@
+import json as _json
 import requests as _requests
 
+from pathlib import Path as _Path
 from bs4 import BeautifulSoup as _BeautifulSoup
 from newspaper import Article as _Article
 
@@ -37,6 +39,16 @@ def article_to_dict(url):
     url = article.url
     title = article.title
     text = article.text
-    publish_date = article.publish_date
+    publish_date = article.publish_date.isoformat()
 
     return {'url': url, 'date': publish_date, 'body': [title, text]}
+
+
+def dict_to_json(data, path):
+    p = _Path().cwd() / path
+
+    if p.parent.is_dir():
+        with open(p, 'w', encoding='utf-8') as f:
+            _json.dump(data, f, ensure_ascii=False)
+
+    return p.exists()
