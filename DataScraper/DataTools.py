@@ -39,7 +39,7 @@ def article_to_dict(url):
     url = article.url
     title = article.title
     text = article.text
-    publish_date = article.publish_date
+    publish_date = article.publish_date.isoformat()
 
     return {'url': url, 'date': publish_date, 'body': [title, text]}
 
