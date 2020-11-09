@@ -25,13 +25,12 @@ def make_url_naver(query, sort, start):
 
 
 def creator(queue, pages, select):
-    hrefs = []
-    with Pool(cpu_count()) as pool:
-        urls = [make_url_naver('코로나', 2, page * 10) for page in range(pages)]
-        for _, url in enumerate(urls):
-            print(_)
-            hrefs.extend(pool.apply(DataTools.get_href, (url, select)))
-        pool.map(queue.put, hrefs)
+    for page in range(pages):
+        with Pool(cpu_count()) as pool:
+            url = pool.apply(make_url_naver, ('코로나', 2, page * 10))
+            urls = pool.apply(DataTools.get_href, (url, select))
+            pool.map(queue.put, urls)
+        print('page: ', page)
 
 
 def worker(queue):
