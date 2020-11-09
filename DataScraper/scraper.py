@@ -24,41 +24,34 @@ def make_url_naver(query, sort, start):
     return url
 
 
-def creator(queue, pages, select):
-    with Pool(cpu_count()) as pool:
-        for page in range(pages):
-            url = pool.apply(make_url_naver, ('코로나', 2, page * 10))
-            urls = pool.apply(DataTools.get_href, (url, select))
-            pool.map(queue.put, urls)
-            print('page: ', page)
+def worker(url):
+    try:
+        result = DataTools.article_to_dict(url)
 
+        if result:
+            print(result['body'][0])
+    except:
+        print(url)
+        result = None
 
-def worker(queue):
-    while not queue.empty():
-        url = queue.get()
-
-        try:
-            result = DataTools.article_to_dict(url)
-
-            if result:
-                print(result['body'][0])
-        except:
-            pass
+    return result
 
 
 def main():
     select = 'div.news_area > a'
+    pages = 5
 
-    manager = Manager()
-    que = manager.Queue()
+    obj = []
+    urls = [make_url_naver('코로나', 2, page * 10) for page in range(pages)]
 
-    proc1 = Process(target=creator, args=(que, 10, select))
-    proc2 = Process(target=worker, args=(que, ))
+    with Pool(cpu_count()) as pool:
+        for _, url in enumerate(urls):
+            print(_)
+            href = pool.apply(DataTools.get_href, (url, select))
+            obj.extend(pool.map(worker, href))
 
-    proc1.start()
-    proc1.join()
-    proc2.start()
-    proc2.join()
+    if DataTools.dict_to_json(obj, '../data/test.json'):
+        print('All process complite!!')
 
 
 if __name__ == '__main__':
