@@ -25,27 +25,25 @@ def make_url_naver(query, sort, start):
 
 
 def creator(queue, pages, select):
-    pool = Pool(cpu_count())
-    for page in range(pages):
-        url = make_url_naver('코로나', 2, page * 10)
-        urls = DataTools.get_href(url, select)
-
-        pool.map(queue.put, urls)
-
-        print('page: ', page)
+    hrefs = []
+    with Pool(cpu_count()) as pool:
+        urls = [make_url_naver('코로나', 2, page * 10) for page in range(pages)]
+        for _, url in enumerate(urls):
+            print(_)
+            hrefs.extend(pool.apply(DataTools.get_href, (url, select)))
+        pool.map(queue.put, hrefs)
 
 
 def worker(queue):
-    while not queue.empty():
-        url = queue.get()
+    url = queue.get()
 
-        try:
-            result = DataTools.article_to_dict(url)
+    try:
+        result = DataTools.article_to_dict(url)
 
-            if result:
-                print(result['body'][0])
-        except:
-            pass
+        if result:
+            print(result['body'][0])
+    except:
+        pass
 
 
 def main():
@@ -54,13 +52,14 @@ def main():
     manager = Manager()
     que = manager.Queue()
 
-    proc1 = Process(target=creator, args=(que, 1000, select))
-    proc2 = Process(target=worker, args=(que, ))
-
+    proc1 = Process(target=creator, args=(que, 10, select))
     proc1.start()
     proc1.join()
-    proc2.start()
-    proc2.join()
+
+    with Pool(cpu_count()) as pool:
+        while not que.empty():
+            pool.apply(worker, (que, ))
+
 
 
 if __name__ == '__main__':
