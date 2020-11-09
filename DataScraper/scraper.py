@@ -35,15 +35,16 @@ def creator(queue, pages, select):
 
 
 def worker(queue):
-    url = queue.get()
+    while not queue.empty():
+        url = queue.get()
 
-    try:
-        result = DataTools.article_to_dict(url)
+        try:
+            result = DataTools.article_to_dict(url)
 
-        if result:
-            print(result['body'][0])
-    except:
-        pass
+            if result:
+                print(result['body'][0])
+        except:
+            pass
 
 
 def main():
@@ -53,13 +54,12 @@ def main():
     que = manager.Queue()
 
     proc1 = Process(target=creator, args=(que, 10, select))
+    proc2 = Process(target=worker, args=(que, ))
+
     proc1.start()
     proc1.join()
-
-    with Pool(cpu_count()) as pool:
-        while not que.empty():
-            pool.apply(worker, (que, ))
-
+    proc2.start()
+    proc2.join()
 
 
 if __name__ == '__main__':
