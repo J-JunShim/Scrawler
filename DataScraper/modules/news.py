@@ -18,19 +18,21 @@ def get_article(url):
 
 
 def article_to_dict(url):
+    result = None
     article = get_article(url)
 
-    if not article.is_valid_url():
-        return {}
-    article.nlp()
+    if article:
+        article.nlp()
 
-    url = article.url
-    title = article.title
-    text = article.text
-    summary = article.summary
-    publish_date = article.publish_date.isoformat()
+        url = article.url
+        title = article.title
+        text = article.text
+        summary = article.summary
+        publish_date = article.publish_date.isoformat()
 
-    return dict(url=url, date=publish_date, body=[title, text, summary])
+        result = dict(url=url, date=publish_date, body=[title, text, summary])
+
+    return result
 
 
 def dict_to_json(data, path):
