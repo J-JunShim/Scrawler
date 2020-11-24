@@ -13,36 +13,46 @@ class Scraper:
         self.date = date
         self.selector = selector
 
-    def creator(self):
-        urls = []
-        urlsLen = 0
-        page = 0
+    def generate_href(self, start, urls):
+        url = urltools.search_naver(
+            self.query, start=start, ds=self.date, de=self.date)
+        hrefs = urltools.get_href(url, self.selector)
 
+        map(urls.append, hrefs)
+
+        # return len(hrefs)
+
+    def creator(self):
+        page = 0
+        urlsLen = 0
+        procs = []
+
+        manager = Manager()
+        urls = manager.list()
         spinner = spin.MoonSpinner('Scraping ')
 
         while True:
             start = page * 10
+            urlsLen = len(urls)
 
             try:
-                url = urltools.search_naver(
-                    self.query, start=start, ds=self.date, de=self.date)
-
-                for href in urltools.get_href(url, self.selector):
-                    if not href:
-                        continue
-                    urls.append(href)
+                proc = Process(target=self.generate_href, args=(start, urls))
+                procs.append(proc)
+                proc.start()
             except KeyboardInterrupt:
                 break
             else:
-                if len(urls) <= urlsLen:
-                    break
-                else:
-                    page += 1
-                    urlsLen = len(urls)
+                page += 1
             finally:
                 spinner.next()
 
-        return urls
+                if len(urls) - 1 >= urlsLen:
+                    break
+
+        for proc in procs:
+            proc.join()
+
+        return set(urls)
 
     @staticmethod
     def worker(url, article=None):
@@ -51,10 +61,6 @@ class Scraper:
             value = news.article_to_dict(url)
         except:
             pass
-        # finally:
-        #     if value:
-        #         value = None
-                # article.append(value)
         return value
 
     def scrap(self):
@@ -77,16 +83,22 @@ class Scraper:
 
 
 if __name__ == '__main__':
-    date = datestamp.get_date(1)
     keyword = '코로나'
     select = 'div.news_area > a'
 
-    naver = Scraper(keyword, date, select)
-    # naver.scrap()
-    try:
-        proc = Process(target=naver.scrap)
-        proc.start()
-    except:
-        pass
-    else:
+    procs = []
+
+    for i in range(5, 10):
+        date = datestamp.get_date(i)
+        # naver.scrap()
+        try:
+            scraper = Scraper(keyword, date, select)
+            proc = Process(target=scraper.scrap)
+        except:
+            continue
+        else:
+            procs.append(proc)
+            proc.start()
+
+    for proc in procs:
         proc.join()
