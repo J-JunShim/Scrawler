@@ -1,7 +1,6 @@
 from pathlib import Path
-from itertools import repeat
 from multiprocessing import Manager, Process, Queue
-from tqdm import tqdm
+
 from progress import spinner as spin, bar
 
 from modules import datestamp, news, urltools
