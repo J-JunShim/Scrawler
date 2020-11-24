@@ -4,7 +4,7 @@ from multiprocessing import Process, Pool, cpu_count
 from tqdm import tqdm
 from progress import spinner as spin, bar
 
-import modules
+from modules import datestamp, news, urltools
 
 
 class Scraper:
@@ -24,10 +24,10 @@ class Scraper:
             start = page * 10
 
             try:
-                url = modules.url.search_naver(
+                url = urltools.search_naver(
                     self.query, start=start, ds=self.date, de=self.date)
 
-                for href in modules.urltools.get_href(url, self.selector):
+                for href in urltools.get_href(url, self.selector):
                     if not href:
                         continue
                     urls.append(href)
@@ -48,7 +48,7 @@ class Scraper:
     def worker(url):
         value = None
         try:
-            value = modules.news.article_to_dict(url)
+            value = news.article_to_dict(url)
         except:
             pass
 
@@ -62,17 +62,20 @@ class Scraper:
         path = root / f"{date}.json"
         print('Process start!!')
 
-        urls = set(self.creator())
+        try:
+            urls = set(self.creator())
+        except:
+            pass
 
         with Pool(cpu_count()) as pool:
             article.extend(pool.map(self.worker, urls))
 
-        if modules.news.dict_to_json(article, path):
+        if news.dict_to_json(article, path):
             print('\nProcess complite!!')
 
 
 if __name__ == '__main__':
-    date = modules.datestamp.get_date(1)
+    date = datestamp.get_date(1)
     keyword = '코로나'
     select = 'div.news_area > a'
 
