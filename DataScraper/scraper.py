@@ -1,6 +1,6 @@
 from pathlib import Path
 from itertools import repeat
-from multiprocessing import Manager, Process, Pool, cpu_count
+from multiprocessing import Manager, Process, Queue
 from tqdm import tqdm
 from progress import spinner as spin, bar
 
@@ -13,55 +13,45 @@ class Scraper:
         self.date = date
         self.selector = selector
 
-    def generate_href(self, start, urls):
+    def generate_href(self, start):
         url = urltools.search_naver(
             self.query, start=start, ds=self.date, de=self.date)
-        hrefs = urltools.get_href(url, self.selector)
 
-        map(urls.append, hrefs)
+        return urltools.get_href(url, self.selector)
 
-        # return len(hrefs)
-
-    def creator(self):
+    def creator(self, que):
         page = 0
-        urlsLen = 0
-        procs = []
 
-        manager = Manager()
-        urls = manager.list()
         spinner = spin.MoonSpinner('Scraping ')
 
         while True:
             start = page * 10
-            urlsLen = len(urls)
 
             try:
-                proc = Process(target=self.generate_href, args=(start, urls))
-                procs.append(proc)
-                proc.start()
+                urls = self.generate_href(start)
             except KeyboardInterrupt:
                 break
             else:
-                page += 1
+                if urls:
+                    map(que.put, urls)
+                else:
+                    break
             finally:
+                page += 1
                 spinner.next()
 
-                if len(urls) - 1 >= urlsLen:
-                    break
-
-        for proc in procs:
-            proc.join()
-
-        return set(urls)
-
     @staticmethod
-    def worker(url, article=None):
+    def worker(que, article):
+        url = que.get()
         value = None
+
         try:
             value = news.article_to_dict(url)
         except:
             pass
-        return value
+
+        if value:
+            article.append(value)
 
     def scrap(self):
         article = []
@@ -72,33 +62,54 @@ class Scraper:
 
         print('Process start!!')
 
-        urls = set(self.creator())
+        que = Queue()
+        manager = Manager()
+        article = manager.list()
 
-        with Pool(cpu_count()) as pool:
-            article.append(pool.map(self.worker, urls))
+        create = Process(target=self.creator, args=[que])
+        work = Process(target=self.worker, args=[que, article])
 
-        article = list(filter(None, article[0]))
+        create.start()
+        work.start()
+        que. close()
+        create.join()
+        work.join()
+
+        article = list(filter(None, article))
+
         if news.dict_to_json(article, path):
             print('\nProcess complite!!')
 
 
-if __name__ == '__main__':
+def main(i):
     keyword = '코로나'
     select = 'div.news_area > a'
 
-    procs = []
+    date = datestamp.get_date(i)
+    scraper = Scraper(keyword, date, select)
 
+    scraper.scrap()
+
+
+if __name__ == '__main__':
     for i in range(5, 10):
-        date = datestamp.get_date(i)
-        # naver.scrap()
-        try:
-            scraper = Scraper(keyword, date, select)
-            proc = Process(target=scraper.scrap)
-        except:
-            continue
-        else:
-            procs.append(proc)
-            proc.start()
+        main(i)
 
-    for proc in procs:
-        proc.join()
+    # with Pool() as pool:
+    #     pool.map(main, range(5, 10))
+
+    # procs = []
+    # for i in range(5, 10):
+    #     date = datestamp.get_date(i)
+    #     # naver.scrap()
+    #     try:
+    #         scraper = Scraper(keyword, date, select)
+    #         proc = Process(target=scraper.scrap)
+    #     except:
+    #         continue
+    #     else:
+    #         procs.append(proc)
+    #         proc.start()
+
+    # for proc in procs:
+    #     proc.join()
