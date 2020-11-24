@@ -27,11 +27,15 @@ class Scraper:
         create = Process(target=self.creator, args=[que])
         work = Process(target=self.worker, args=[que, article])
 
-        create.start()
-        work.start()
-        que. close()
-        create.join()
-        work.join()
+        try:
+            create.start()
+            work.start()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            que. close()
+            create.join()
+            work.join()
 
         article = list(filter(None, article))
 
@@ -39,23 +43,12 @@ class Scraper:
             print('\nProcess complite!!')
 
     def creator(self, que):
-        page = 0
         spinner = spin.MoonSpinner('Scraping ')
 
-        while True:
-            start = page * 10
-
-            try:
-                urls = self.get_url(start)
-            except KeyboardInterrupt:
-                break
-            else:
-                if urls:
-                    map(que.put, urls)
-                else:
-                    break
-            finally:
-                page += 1
+        with Pool() as pool:
+            for page in range(100):
+                urls = pool.apply(self.get_url, [page])
+                map(que.put, urls)
                 spinner.next()
 
     def worker(self, que, article):
@@ -71,7 +64,7 @@ class Scraper:
 
     def get_url(self, start):
         url = urltools.search_naver(
-            self.query, start=start, ds=self.date, de=self.date)
+            self.query, start=start * 10, ds=self.date, de=self.date)
 
         return urltools.get_href(url, self.selector)
 
