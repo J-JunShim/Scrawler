@@ -1,6 +1,6 @@
 from pathlib import Path
 from itertools import repeat
-from multiprocessing import Process, Pool, cpu_count
+from multiprocessing import Manager, Process, Pool, cpu_count
 from tqdm import tqdm
 from progress import spinner as spin, bar
 
@@ -45,18 +45,21 @@ class Scraper:
         return urls
 
     @staticmethod
-    def worker(url):
+    def worker(url, article=None):
         value = None
         try:
             value = news.article_to_dict(url)
         except:
             pass
-
-        if value:
-            return value
+        # finally:
+        #     if value:
+        #         value = None
+                # article.append(value)
+        return value
 
     def scrap(self):
         article = []
+
         date = self.date.strftime('%Y%m%d')
         root = Path().absolute() / 'data'
         path = root / f"{date}.json"
@@ -64,9 +67,11 @@ class Scraper:
         print('Process start!!')
 
         urls = set(self.creator())
+
         with Pool(cpu_count()) as pool:
-            article.extend(pool.map(self.worker, tqdm(urls)))
-            
+            article.append(pool.map(self.worker, urls))
+
+        article = list(filter(None, article[0]))
         if news.dict_to_json(article, path):
             print('\nProcess complite!!')
 
@@ -78,7 +83,10 @@ if __name__ == '__main__':
 
     naver = Scraper(keyword, date, select)
     # naver.scrap()
-    proc = Process(target=naver.scrap)
-
-    proc.start()
-    proc.join()
+    try:
+        proc = Process(target=naver.scrap)
+        proc.start()
+    except:
+        pass
+    else:
+        proc.join()
