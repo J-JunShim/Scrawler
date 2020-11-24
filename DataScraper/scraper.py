@@ -60,16 +60,13 @@ class Scraper:
         date = self.date.strftime('%Y%m%d')
         root = Path().absolute() / 'data'
         path = root / f"{date}.json"
+
         print('Process start!!')
 
-        try:
-            urls = set(self.creator())
-        except:
-            pass
-
+        urls = set(self.creator())
         with Pool(cpu_count()) as pool:
-            article.extend(pool.map(self.worker, urls))
-
+            article.extend(pool.map(self.worker, tqdm(urls)))
+            
         if news.dict_to_json(article, path):
             print('\nProcess complite!!')
 
@@ -85,4 +82,3 @@ if __name__ == '__main__':
 
     proc.start()
     proc.join()
-    
