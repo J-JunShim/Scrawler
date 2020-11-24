@@ -135,4 +135,4 @@ dmypy.json
 # Data
 data/
 
-test.py
+test*.py
