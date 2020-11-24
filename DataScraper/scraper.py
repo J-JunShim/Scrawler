@@ -1,58 +1,85 @@
-import DataTools
-
-from multiprocessing import Manager, Process, Pool, cpu_count
+from pathlib import Path
 from itertools import repeat
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
+from multiprocessing import Process, Pool, cpu_count
+from tqdm import tqdm
+from progress import spinner as spin, bar
+
+import modules
 
 
-def make_url_naver(query, sort, start):
-    def _dt_format(dt): return dt.strftime('%Y%m%d')
+class Scraper:
+    def __init__(self, query, date, selector) -> None:
+        self.query = query
+        self.date = date
+        self.selector = selector
 
-    now = datetime.now()
-    ds = now - relativedelta(year=now.year - 1)
-    de = now - timedelta(days=1)
+    def creator(self):
+        urls = []
+        urlsLen = 0
+        page = 0
 
-    url = 'https://search.naver.com/search.naver?where=news'
+        spinner = spin.MoonSpinner('Scraping ')
 
-    sort = [0, 1, 2][sort]
-    dse = f"from{_dt_format(ds)}to{_dt_format(de)}"
-    nso = f'so%3Add%2Cp%3A{dse}%2Ca%3Aall'
+        while True:
+            start = page * 10
 
-    url += f'&query={query}&sort={sort}&nso={nso}&start={start}&refresh_start=0'
+            try:
+                url = modules.url.search_naver(
+                    self.query, start=start, ds=self.date, de=self.date)
 
-    return url
+                for href in modules.urltools.get_href(url, self.selector):
+                    if not href:
+                        continue
+                    urls.append(href)
+            except KeyboardInterrupt:
+                break
+            else:
+                if len(urls) <= urlsLen:
+                    break
+                else:
+                    page += 1
+                    urlsLen = len(urls)
+            finally:
+                spinner.next()
 
+        return urls
 
-def worker(url):
-    try:
-        result = DataTools.article_to_dict(url)
+    @staticmethod
+    def worker(url):
+        value = None
+        try:
+            value = modules.news.article_to_dict(url)
+        except:
+            pass
 
-        if result:
-            print(result['body'][0])
-    except:
-        print(url)
-        result = None
+        if value:
+            return value
 
-    return result
+    def scrap(self):
+        article = []
+        date = self.date.strftime('%Y%m%d')
+        root = Path().absolute() / 'data'
+        path = root / f"{date}.json"
+        print('Process start!!')
 
+        urls = set(self.creator())
 
-def main():
-    select = 'div.news_area > a'
-    pages = 5
+        with Pool(cpu_count()) as pool:
+            article.extend(pool.map(self.worker, urls))
 
-    obj = []
-    urls = [make_url_naver('코로나', 2, page * 10) for page in range(pages)]
-
-    with Pool(cpu_count()) as pool:
-        for _, url in enumerate(urls):
-            print(_)
-            href = pool.apply(DataTools.get_href, (url, select))
-            obj.extend(pool.map(worker, href))
-
-    if DataTools.dict_to_json(obj, '../data/test.json'):
-        print('All process complite!!')
+        if modules.news.dict_to_json(article, path):
+            print('\nProcess complite!!')
 
 
 if __name__ == '__main__':
-    main()
+    date = modules.datestamp.get_date(1)
+    keyword = '코로나'
+    select = 'div.news_area > a'
+
+    naver = Scraper(keyword, date, select)
+    # naver.scrap()
+    proc = Process(target=naver.scrap)
+
+    proc.start()
+    proc.join()
+    
