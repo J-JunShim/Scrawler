@@ -1,5 +1,5 @@
 from pathlib import Path
-from multiprocessing import Manager, Process, Queue
+from multiprocessing import Manager, Process, Queue, Pool
 
 from progress import spinner as spin, bar
 
@@ -12,49 +12,7 @@ class Scraper:
         self.date = date
         self.selector = selector
 
-    def generate_href(self, start):
-        url = urltools.search_naver(
-            self.query, start=start, ds=self.date, de=self.date)
-
-        return urltools.get_href(url, self.selector)
-
-    def creator(self, que):
-        page = 0
-
-        spinner = spin.MoonSpinner('Scraping ')
-
-        while True:
-            start = page * 10
-
-            try:
-                urls = self.generate_href(start)
-            except KeyboardInterrupt:
-                break
-            else:
-                if urls:
-                    map(que.put, urls)
-                else:
-                    break
-            finally:
-                page += 1
-                spinner.next()
-
-    @staticmethod
-    def worker(que, article):
-        url = que.get()
-        value = None
-
-        try:
-            value = news.article_to_dict(url)
-        except:
-            pass
-
-        if value:
-            article.append(value)
-
     def scrap(self):
-        article = []
-
         date = self.date.strftime('%Y%m%d')
         root = Path().absolute() / 'data'
         path = root / f"{date}.json"
@@ -68,16 +26,53 @@ class Scraper:
         create = Process(target=self.creator, args=[que])
         work = Process(target=self.worker, args=[que, article])
 
-        create.start()
-        work.start()
-        que. close()
-        create.join()
-        work.join()
+        try:
+            create.start()
+            work.start()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            que. close()
+            create.join()
+            work.join()
 
         article = list(filter(None, article))
 
         if news.dict_to_json(article, path):
             print('\nProcess complite!!')
+
+    def creator(self, que):
+        spinner = spin.MoonSpinner('Scraping ')
+
+        with Pool() as pool:
+            for page in range(100):
+                urls = pool.apply(self.get_url, [page])
+                map(que.put, urls)
+                spinner.next()
+
+    def worker(self, que, article):
+        proc = []
+
+        while que.empty():
+            url = que.get()
+            p = Process(target=self.get_article, args=[url, article])
+            p.start()
+
+        for p in proc:
+            p.join()
+
+    def get_url(self, start):
+        url = urltools.search_naver(
+            self.query, start=start * 10, ds=self.date, de=self.date)
+
+        return urltools.get_href(url, self.selector)
+
+    @staticmethod
+    def get_article(url, article):
+        value = news.article_to_dict(url)
+
+        if value:
+            article.append(value)
 
 
 def main(i):
@@ -93,22 +88,3 @@ def main(i):
 if __name__ == '__main__':
     for i in range(5, 10):
         main(i)
-
-    # with Pool() as pool:
-    #     pool.map(main, range(5, 10))
-
-    # procs = []
-    # for i in range(5, 10):
-    #     date = datestamp.get_date(i)
-    #     # naver.scrap()
-    #     try:
-    #         scraper = Scraper(keyword, date, select)
-    #         proc = Process(target=scraper.scrap)
-    #     except:
-    #         continue
-    #     else:
-    #         procs.append(proc)
-    #         proc.start()
-
-    # for proc in procs:
-    #     proc.join()
