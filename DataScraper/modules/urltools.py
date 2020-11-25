@@ -6,6 +6,17 @@ from bs4 import BeautifulSoup as _BeautifulSoup
 from . import datestamp
 
 
+def get_href(url, selector):
+    urls = []
+    response = _requests.get(url)
+
+    if response.ok:
+        document = _BeautifulSoup(response.text, 'html.parser')
+        urls = [a.get('href') for a in document.select(selector)]
+
+    return urls
+
+
 def parse_url(url):
     unquoted = _parse.unquote(url)
 
@@ -24,21 +35,10 @@ def make_url(parsed, queries):
     return url.geturl()
 
 
-def get_href(url, selector):
-    urls = []
-    response = _requests.get(url)
-
-    if response.ok:
-        document = _BeautifulSoup(response.text, 'html.parser')
-        urls = [a.get('href') for a in document.select(selector)]
-
-    return urls
-
-
 def search_naver(query, start=0, sort='acc', ds=None, de=None):
     parsed = parse_url('https://search.naver.com/search.naver')
 
-    sort = {'acc': 0, 'new': 1, 'old': 2}[sort]
+    sort = {'acc': 0, 'new': 1, 'old': 2}.get(sort)
     nso = dict(
         so='r', p=f'from{datestamp.dt_format(ds)}to{datestamp.dt_format(de)}', a='all')
     nso = _parse.urlencode(nso).replace('=', ':').replace('&', ',')
