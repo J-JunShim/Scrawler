@@ -26,10 +26,10 @@ def make_url(parsed, queries):
 
 def get_href(url, selector):
     urls = []
-    request = _requests.get(url)
+    response = _requests.get(url)
 
-    if request.ok:
-        document = _BeautifulSoup(request.text, 'html.parser')
+    if response.ok:
+        document = _BeautifulSoup(response.text, 'html.parser')
         urls = [a.get('href') for a in document.select(selector)]
 
     return urls
