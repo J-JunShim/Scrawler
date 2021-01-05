@@ -12,79 +12,48 @@ class Scraper:
         self.date = date
         self.selector = selector
 
+        self.spinner = spin.MoonSpinner('Scraping ')
+
     def scrap(self):
-        date = self.date.strftime('%Y%m%d')
-        root = Path().absolute() / 'data'
-        path = root / f"{date}.json"
-
-        print('Process start!!')
-
-        que = Queue()
         manager = Manager()
-        article = manager.list()
-
-        create = Process(target=self.creator, args=[que])
-        work = Process(target=self.worker, args=[que, article])
-
+        articles = manager.list()
+        
         try:
-            create.start()
-            work.start()
+            for page in range(100):
+                self._worker(page, articles)
         except KeyboardInterrupt:
             pass
-        finally:
-            que. close()
-            create.join()
-            work.join()
 
-        article = list(filter(None, article))
+        return list(filter(None, articles))
+        
 
-        if news.dict_to_json(article, path):
-            print('\nProcess complite!!')
+    def _worker(self, page, articles):
+        for url in self._get_url(page):
+            articles.append(news.article_to_dict(url))
+            self.spinner.next()
 
-    def creator(self, que):
-        spinner = spin.MoonSpinner('Scraping ')
-
-        with Pool() as pool:
-            for page in range(100):
-                urls = pool.apply(self.get_url, [page])
-                map(que.put, urls)
-                spinner.next()
-
-    def worker(self, que, article):
-        proc = []
-
-        while que.empty():
-            url = que.get()
-            p = Process(target=self.get_article, args=[url, article])
-            p.start()
-
-        for p in proc:
-            p.join()
-
-    def get_url(self, start):
+    def _get_url(self, start):
         url = urltools.search_naver(
             self.query, start=start * 10, ds=self.date, de=self.date)
 
         return urltools.get_href(url, self.selector)
-
-    @staticmethod
-    def get_article(url, article):
-        value = news.article_to_dict(url)
-
-        if value:
-            article.append(value)
+            
 
 
 def main(i):
+    dataDir = Path().absolute() / 'data'
     keyword = '코로나'
     select = 'div.news_area > a'
 
-    date = datestamp.get_date(i)
-    scraper = Scraper(keyword, date, select)
+    for date in list(map(datestamp.get_date, range(5, 10))):
+        print(date.isoformat(), 'Process start!!')
 
-    scraper.scrap()
+        scraper = Scraper(keyword, date, select)
+        path = dataDir / f"{date.strftime('%Y%m%d')}.json"
+
+        if news.dict_to_json(scraper.scrap(), path):
+            print('\nProcess complite!!')
 
 
 if __name__ == '__main__':
-    for i in range(5, 10):
-        main(i)
+    main()
