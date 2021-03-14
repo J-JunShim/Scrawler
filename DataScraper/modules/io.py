@@ -25,7 +25,7 @@ def download_image(src):
     return Image.open(BytesIO(response.content))
 
 
-def download_images(srcList, query, directory):
+def save_images(srcList, query, directory):
     from datetime import datetime
 
     def timestamp():
