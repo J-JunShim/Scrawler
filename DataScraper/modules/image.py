@@ -25,6 +25,14 @@ def download_image(src):
     return Image.open(BytesIO(response.content))
 
 
+def image_array(src):
+    resp = requests.get(src)
+    arr = imread(BytesIO(
+        resp.content), resp.headers['Content-Type'].split('/')[-1].split(';')[0].split('+')[0])
+
+    return arr
+
+
 def save_images(srcList, query, directory):
     from datetime import datetime
 
