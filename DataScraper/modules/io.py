@@ -19,10 +19,10 @@ def get_user_directory(extraDir=None):
     return os.path.join(directory, extraDir) if extraDir else directory
 
 
-def download_image(src, path):
+def download_image(src):
     response = requests.get(src)
-    img = Image.open(BytesIO(response.content)).convert('RGB')
-    img.save(f'{path}.jpg')
+
+    return Image.open(BytesIO(response.content))
 
 
 def download_images(srcList, query, directory):
@@ -43,7 +43,9 @@ def download_images(srcList, query, directory):
     for i, src in enumerate(srcList, 1):
         try:
             filename = f'img{timestamp()}_{query}{i}'
-            download_image(src, f'{directory}{filename}')
+            pil = download_image(src).convert('RGB')
+
+            pil.save(f'{directory}{filename}.jpg')
         except KeyboardInterrupt:
             print('\nStop downloading!')
             break
