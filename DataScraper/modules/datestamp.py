@@ -22,3 +22,7 @@ def get_date_years(yearsBefore):
 
 def dt_format(dt):
     return dt.strftime('%Y%m%d')
+
+
+def timestamp():
+    return get_now().strftime('%Y-%m-%d_%H%M%S')
