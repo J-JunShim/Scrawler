@@ -2,47 +2,21 @@ import os
 import sys
 import time
 
-from datetime import datetime
-
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 
-from modules import image
+from modules import image, datestamp
 
 
-def timestamp():
-    return datetime.now().strftime('%Y-%m-%d_%H%M%S')
+def progress_bar(value, endvalue, stamp, bar_length=50):
+    percent = float(value) / endvalue
+    arrow = '-' * int(round(percent * bar_length)-1) + '>'
+    spaces = ' ' * (bar_length - len(arrow))
 
-
-def save_images(srcList, query, directory):
-    directory = image.get_user_directory(
-        'images') if directory is None else os.path.abspath(directory)
-
-    if not os.path.isdir(directory):
-        os.makedirs(directory)
-
-    print(f"\n\nDownloading {len(srcList)} images to '{directory}'...")
-
-    total = 0
-    for i, src in enumerate(srcList, 1):
-        try:
-            filename = f'img{timestamp()}_{query}{i}'
-            pil = image.download_image(src).convert('RGB')
-
-            pil.save(f'{directory}{filename}.jpg')
-        except KeyboardInterrupt:
-            print('\nStop downloading!')
-            break
-        except:
-            total -= 1
-            print(f'failed: {filename}')
-            pass
-        else:
-            total += 1
-            print(f'success: {filename}')
-
-    print(f'\n{total if total>0 else 0}/{len(srcList)} files safely done')
+    sys.stdout.write('\rPercent: [{0}] {1}%  Time: {2}'.format(
+        arrow + spaces, int(round(percent * 100)), time.strftime('%M:%S', time.gmtime(stamp))))
+    sys.stdout.flush()
 
 
 class SearchImage:
@@ -51,14 +25,34 @@ class SearchImage:
         self.path = path
 
     @staticmethod
-    def progress_bar(value, endvalue, stamp, bar_length=50):
-        percent = float(value) / endvalue
-        arrow = '-' * int(round(percent * bar_length)-1) + '>'
-        spaces = ' ' * (bar_length - len(arrow))
+    def save_images(srcList, query, directory):
+        directory = image.get_user_directory(
+            'images') if directory is None else os.path.abspath(directory)
 
-        sys.stdout.write('\rPercent: [{0}] {1}%  Time: {2}'.format(
-            arrow + spaces, int(round(percent * 100)), time.strftime('%M:%S', time.gmtime(stamp))))
-        sys.stdout.flush()
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+
+        print(f"\n\nDownloading {len(srcList)} images to '{directory}'...")
+
+        total = 0
+        for i, src in enumerate(srcList, 1):
+            try:
+                filename = f'img{datestamp.timestamp()}_{query}{i}'
+                pil = image.download_image(src).convert('RGB')
+
+                pil.save(f'{directory}{filename}.jpg')
+            except KeyboardInterrupt:
+                print('\nStop downloading!')
+                break
+            except:
+                total -= 1
+                print(f'failed: {filename}')
+                pass
+            else:
+                total += 1
+                print(f'success: {filename}')
+
+        print(f'\n{total if total>0 else 0}/{len(srcList)} files safely done')
 
     @staticmethod
     def sel_driver(url):
@@ -75,7 +69,7 @@ class SearchImage:
             driver.switch_to_window(window)
             driver.close()
 
-    def naver_image(self, n_round=10, down=True):
+    def naver_image(self, n_round=10):
         tic = time.time()
         url = f'https://search.naver.com/search.naver?where=image&query={self.query}'
 
@@ -90,7 +84,7 @@ class SearchImage:
                 srcList.extend([_['src'] for _ in dom.select(
                     'div.viewer img') if _.has_attr('src')])
 
-                self.progress_bar(n+1, n_round, time.time()-tic)
+                progress_bar(n+1, n_round, time.time()-tic)
 
                 try:
                     driver.find_element_by_css_selector(
@@ -107,9 +101,10 @@ class SearchImage:
         self.closed_sel_windows(driver)
 
         srcList = set(srcList)
-        save_images(srcList, self.query, self.path)
 
-    def daum_image(self, n_round=10, down=True):
+        self.save_images(srcList, self.query, self.path)
+
+    def daum_image(self, n_round=10):
         tic = time.time()
         url = f'https://search.daum.net/search?w=img&enc=utf8&q={self.query}'
 
@@ -117,18 +112,18 @@ class SearchImage:
         driver.find_element_by_css_selector(
             'div.cont_img div.wrap_thumb').click()
 
-        srcList = []
+        srcList = list()
         for n in range(n_round):
             try:
                 dom = BeautifulSoup(driver.page_source, 'lxml')
                 srcList.extend([_['src'] for _ in dom.select(
                     'div.cont_viewer div.inner_thumb img:last-child') if _.has_attr('src')])
 
-                self.progress_bar(n+1, n_round, time.time()-tic)
+                progress_bar(n+1, n_round, time.time()-tic)
 
                 try:
                     driver.find_element_by_css_selector('a.btn_next').click()
-                except NoSuchElementException as e:
+                except NoSuchElementException:
                     driver.find_element_by_css_selector(
                         'a.expender.open').click()
                     driver.find_elements_by_css_selector(
@@ -141,9 +136,10 @@ class SearchImage:
 
         self.closed_sel_windows(driver)
         srcList = set(srcList)
-        save_images(srcList, self.query, self.path)
 
-    def google_image(self, down=True):
+        self.save_images(srcList, self.query, self.path)
+
+    def google_image(self):
         import json
 
         tic = time.time()
@@ -177,4 +173,4 @@ class SearchImage:
         stamp = time.time() - tic
         print('Time: ', time.strftime('%M:%S', time.gmtime(stamp)))
 
-        save_images(srcList, self.query, self.path)
+        self.save_images(srcList, self.query, self.path)
