@@ -1,9 +1,48 @@
+import os
 import sys
 import time
+
+from datetime import datetime
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
+
+from modules import image
+
+
+def timestamp():
+    return datetime.now().strftime('%Y-%m-%d_%H%M%S')
+
+
+def save_images(srcList, query, directory):
+    directory = image.get_user_directory(
+        'images') if directory is None else os.path.abspath(directory)
+
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
+    print(f"\n\nDownloading {len(srcList)} images to '{directory}'...")
+
+    total = 0
+    for i, src in enumerate(srcList, 1):
+        try:
+            filename = f'img{timestamp()}_{query}{i}'
+            pil = image.download_image(src).convert('RGB')
+
+            pil.save(f'{directory}{filename}.jpg')
+        except KeyboardInterrupt:
+            print('\nStop downloading!')
+            break
+        except:
+            total -= 1
+            print(f'failed: {filename}')
+            pass
+        else:
+            total += 1
+            print(f'success: {filename}')
+
+    print(f'\n{total if total>0 else 0}/{len(srcList)} files safely done')
 
 
 class SearchImage:
@@ -68,7 +107,7 @@ class SearchImage:
         self.closed_sel_windows(driver)
 
         srcList = set(srcList)
-        self.save_imgs(srcList, self.query, self.path)
+        save_images(srcList, self.query, self.path)
 
     def daum_image(self, n_round=10, down=True):
         tic = time.time()
@@ -102,7 +141,7 @@ class SearchImage:
 
         self.closed_sel_windows(driver)
         srcList = set(srcList)
-        self.save_imgs(srcList, self.query, self.path)
+        save_images(srcList, self.query, self.path)
 
     def google_image(self, down=True):
         import json
@@ -138,4 +177,4 @@ class SearchImage:
         stamp = time.time() - tic
         print('Time: ', time.strftime('%M:%S', time.gmtime(stamp)))
 
-        self.save_imgs(srcList, self.query, self.path)
+        save_images(srcList, self.query, self.path)
