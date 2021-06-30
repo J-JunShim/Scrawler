@@ -12,17 +12,17 @@ def get_href(url, selector):
         document = _BeautifulSoup(response.text, 'html.parser')
         urls = [a.get('href') for a in document.select(selector)]
 
-    return urls
+    return filter(None, urls)
+
+
+def get_query(parsed):
+    return _parse.parse_qs(parsed.query)
 
 
 def parse_url(url):
     unquoted = _parse.unquote(url)
 
     return _parse.urlparse(unquoted)
-
-
-def get_query(parsed):
-    return _parse.parse_qs(parsed.query)
 
 
 def make_url(parsed, queries):
