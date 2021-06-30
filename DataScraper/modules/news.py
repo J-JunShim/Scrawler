@@ -35,11 +35,11 @@ def article_to_dict(url):
     return result
 
 
-def dict_to_json(data, path):
-    p = _Path().cwd() / path
+def dict_to_json(data, path, name):
+    p = _Path().cwd() / path / f"{name}.jsonl"
 
-    if p.parent.is_dir():
-        with open(p, 'w', encoding='utf-8') as f:
-            _json.dump(data, f, ensure_ascii=False)
+    if p.parent.is_dir() and data:
+        with open(p, 'a', encoding='utf-8') as f:
+            f.write(_json.dump(data, f, ensure_ascii=False)+'\n')
 
     return p.exists()
