@@ -20,9 +20,5 @@ def get_date_years(yearsBefore):
     return relativedelta(year=now.year - yearsBefore)
 
 
-def date_format(date):
-    return date.strftime('%Y%m%d')
-
-
 def timestamp():
     return get_now().strftime('%Y-%m-%d_%H%M%S')
