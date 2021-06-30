@@ -3,8 +3,6 @@ import requests as _requests
 from urllib import parse as _parse
 from bs4 import BeautifulSoup as _BeautifulSoup
 
-from . import datestamp
-
 
 def get_href(url, selector):
     urls = []
@@ -40,7 +38,7 @@ def search_naver(query, start=0, sort='acc', ds=None, de=None):
 
     sort = {'acc': 0, 'new': 1, 'old': 2}.get(sort)
     nso = dict(
-        so='r', p=f'from{datestamp.dt_format(ds)}to{datestamp.dt_format(de)}', a='all')
+        so='r', p=f"from{ds.strftime('%Y%m%d')}to{de.strftime('%Y%m%d')}", a='all')
     nso = _parse.urlencode(nso).replace('=', ':').replace('&', ',')
     queries = dict(where='news', query=query, sort=sort, nso=nso, start=start)
 
