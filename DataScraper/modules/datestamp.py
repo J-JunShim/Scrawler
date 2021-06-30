@@ -7,7 +7,7 @@ def get_now():
     return datetime.now()
 
 
-def get_date(daysBefore):
+def get_date_days(daysBefore):
     now = get_now()
     date = now - timedelta(days=daysBefore)
 
@@ -20,8 +20,8 @@ def get_date_years(yearsBefore):
     return relativedelta(year=now.year - yearsBefore)
 
 
-def dt_format(dt):
-    return dt.strftime('%Y%m%d')
+def date_format(date):
+    return date.strftime('%Y%m%d')
 
 
 def timestamp():
