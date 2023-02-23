@@ -135,5 +135,5 @@ dmypy.json
 # Data
 data/
 
-test*.py
-Untitled*.ipynb
+test*
+Untitled*
